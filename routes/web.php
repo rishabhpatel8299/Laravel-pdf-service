@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Spatie\Browsershot\Browsershot;
+use Illuminate\Support\Facades\Log;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,14 +17,14 @@ use Spatie\Browsershot\Browsershot;
 */
 
 Route::post('/generate', function (Request $request) {
-    $html = $request->input('html');
-    $filename = $request->input('filename', 'document.pdf');
-
-    if (!$html) {
-        return response()->json(['error' => 'Missing HTML'], 422);
-    }
-
     try {
+        $html = $request->input('html');
+        $filename = $request->input('filename', 'document.pdf');
+
+        if (!$html) {
+            return response()->json(['error' => 'Missing HTML'], 422);
+        }
+
         $pdf = Browsershot::html($html)
             ->format('A4')
             ->margins(15, 15, 15, 15)
@@ -34,8 +35,13 @@ Route::post('/generate', function (Request $request) {
         return response($pdf, 200)
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
+
     } catch (\Exception $e) {
-        return response()->json(['error' => 'PDF generation failed', 'message' => $e->getMessage()], 500);
+        Log::error('PDF generation failed: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'PDF generation failed',
+            'message' => $e->getMessage()
+        ], 500);
     }
 });
 
